@@ -228,7 +228,7 @@ spec:
                   requiredDuringSchedulingIgnoredDuringExecution:
                     nodeSelectorTerms:
                     - matchExpressions:
-                      - key: node-role.kubernetes.io/master
+                      - key: node-role.kubernetes.io/control-plane
                         operator: Exists
               containers:
               - args:
@@ -277,6 +277,8 @@ spec:
               tolerations:
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/control-plane
       permissions:
       - rules:
         - apiGroups:
