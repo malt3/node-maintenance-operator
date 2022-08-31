@@ -98,7 +98,7 @@ spec:
   - email: medik8s@googlegroups.com
     name: Medik8s Team
   maturity: beta
-  minKubeVersion: 1.23.0
+  minKubeVersion: 1.22.0
   provider:
     name: Medik8s
     url: https://github.com/medik8s
