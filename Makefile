@@ -242,6 +242,7 @@ GOIMPORTS_DIR ?= $(LOCALBIN)/goimports
 GINKGO_DIR ?= $(LOCALBIN)/ginkgo
 OPM_DIR = $(LOCALBIN)/opm
 OPERATOR_SDK_DIR ?= $(LOCALBIN)/operator-sdk
+HELMIFY_DIR ?= $(LOCALBIN)/helmify
 
 ## Specific Tool Binaries
 KUSTOMIZE = $(KUSTOMIZE_DIR)/$(KUSTOMIZE_VERSION)/kustomize
@@ -251,6 +252,7 @@ GOIMPORTS = $(GOIMPORTS_DIR)/$(GOIMPORTS_VERSION)/goimports
 GINKGO = $(GINKGO_DIR)/$(GINKGO_VERSION)/ginkgo
 OPM = $(OPM_DIR)/$(OPM_VERSION)/opm
 OPERATOR_SDK = $(OPERATOR_SDK_DIR)/$(OPERATOR_SDK_VERSION)/operator-sdk
+HELMIFY = $(HELMIFY_DIR)/$(HELMIFY_VERSION)/helmify
 
 
 .PHONY: kustomize
@@ -258,7 +260,7 @@ kustomize: ## Download kustomize locally if necessary.
 	$(call go-install-tool,$(KUSTOMIZE),$(KUSTOMIZE_DIR),sigs.k8s.io/kustomize/kustomize/$(KUSTOMIZE_VERSION))
 
 .PHONY: controller-gen
-controller-gen: ## Download controller-gen locally if necessary.	
+controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-install-tool,$(CONTROLLER_GEN),$(CONTROLLER_GEN_DIR),sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION})
 
 .PHONY: envtest
@@ -272,6 +274,10 @@ goimports: ## Download goimports locally if necessary.
 .PHONY: ginkgo
 ginkgo: ## Download ginkgo locally if necessary.
 	$(call go-install-tool,$(GINKGO),$(GINKGO_DIR),github.com/onsi/ginkgo/ginkgo@${GINKGO_VERSION})
+
+.PHONY: helmify
+helmify: ## Download helmify locally if necessary.
+	$(call go-install-tool,$(HELMIFY),$(HELMIFY_DIR),github.com/arttor/helmify/cmd/helmify@v0.3.18)
 
 # go-install-tool will delete old package $2, then 'go install' any package $3 to $1.
 define go-install-tool
@@ -345,7 +351,7 @@ catalog-push: ## Push a catalog image.
 
 ##@ Targets used by CI
 
-.PHONY: check 
+.PHONY: check
 check: ## Dockerized version of make test-no-verify
 	$(DOCKER_GO) "make test-no-verify"
 
@@ -353,17 +359,21 @@ check: ## Dockerized version of make test-no-verify
 verify-unchanged: ## Verify there are no un-committed changes
 	./hack/verify-unchanged.sh
 
-.PHONY: container-build 
+.PHONY: container-build
 container-build: check ## Build containers
 	$(DOCKER_GO) "make bundle"
 	make docker-build bundle-build must-gather-build
 
-.PHONY: container-push 
+.PHONY: container-push
 container-push: docker-push bundle-push catalog-build catalog-push must-gather-push ## Push containers (NOTE: catalog can't be build before bundle was pushed)
 
 .PHONY: container-build-and-push
 container-build-and-push: container-build container-push ## Build and push all the four images to quay (docker, bundle, catalog, and must-gather).
 
-.PHONY: cluster-functest 
+.PHONY: cluster-functest
 cluster-functest: ginkgo ## Run e2e tests in a real cluster
 	./hack/functest.sh $(GINKGO_VERSION)
+
+.PHONY: helm
+helm: manifests kustomize helmify
+	$(KUSTOMIZE) build config/default | $(HELMIFY)
