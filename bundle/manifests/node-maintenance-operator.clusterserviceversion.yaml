@@ -272,6 +272,10 @@ spec:
                     memory: 20Mi
                 securityContext:
                   allowPrivilegeEscalation: false
+                volumeMounts:
+                - mountPath: /tmp/k8s-webhook-server/serving-certs
+                  name: cert
+                  readOnly: true
               priorityClassName: system-cluster-critical
               securityContext:
                 runAsNonRoot: true
@@ -282,6 +286,11 @@ spec:
                 key: node-role.kubernetes.io/master
               - effect: NoSchedule
                 key: node-role.kubernetes.io/control-plane
+              volumes:
+              - name: cert
+                secret:
+                  defaultMode: 420
+                  secretName: webhook-server-cert
       permissions:
       - rules:
         - apiGroups:
@@ -345,6 +354,17 @@ spec:
     url: https://github.com/medik8s
   version: 0.0.1
   webhookdefinitions:
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    conversionCRDs:
+    - nodemaintenances.nodemaintenance.medik8s.io
+    deploymentName: node-maintenance-operator-controller-manager
+    generateName: cnodemaintenances.kb.io
+    sideEffects: None
+    targetPort: 9443
+    type: ConversionWebhook
+    webhookPath: /convert
   - admissionReviewVersions:
     - v1
     containerPort: 443
